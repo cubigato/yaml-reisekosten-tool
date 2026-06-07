@@ -1,10 +1,10 @@
 ---
 id: TASK-1.3
 title: Modul- und Datenfluss-Architektur festlegen
-status: To Do
+status: next
 assignee: []
 created_date: '2026-06-07 15:18'
-updated_date: '2026-06-07 15:18'
+updated_date: '2026-06-07 18:45'
 labels:
   - architecture
   - python
@@ -13,7 +13,7 @@ dependencies:
   - TASK-1.2
 parent_task_id: TASK-1
 priority: high
-ordinal: 4000
+ordinal: 1000
 ---
 
 ## Description
