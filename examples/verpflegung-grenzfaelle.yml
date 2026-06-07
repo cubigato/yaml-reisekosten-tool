@@ -1,0 +1,35 @@
+abrechnung:
+  titel: Verpflegung Grenzfaelle
+  zeitraum:
+    von: 2026-06-01
+    bis: 2026-06-30
+  waehrung: EUR
+
+mitarbeiter:
+  name: Greta Grenze
+
+arbeitgeber:
+  name: Beispiel GmbH
+  anschrift:
+    strasse: Stadtweg 8
+    plz: "54321"
+    ort: Musterstadt
+
+defaults:
+  fahrt:
+    start: Zuhause
+    ziel: Beispiel GmbH
+    anlass: Einsatz vor Ort
+    verkehrsmittel: privater_pkw
+    gesamt_km: 60
+
+fahrten:
+  - datum: 2026-06-03
+    startzeit: "08:00"
+    endzeit: "16:00"
+    notiz: Genau acht Stunden, daher keine Verpflegungspauschale
+
+  - datum: 2026-06-10
+    startzeit: "08:00"
+    endzeit: "16:01"
+    notiz: Mehr als acht Stunden, daher Verpflegungspauschale

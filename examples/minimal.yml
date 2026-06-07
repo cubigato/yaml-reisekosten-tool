@@ -1,0 +1,26 @@
+abrechnung:
+  titel: Minimalbeispiel
+  zeitraum:
+    von: 2026-04-14
+    bis: 2026-04-14
+  waehrung: EUR
+
+mitarbeiter:
+  name: Mina Muster
+
+arbeitgeber:
+  name: Beispiel GmbH
+  anschrift:
+    strasse: Stadtweg 8
+    plz: "54321"
+    ort: Musterstadt
+
+fahrten:
+  - datum: 2026-04-14
+    start: Homeoffice
+    ziel: Beispiel GmbH
+    anlass: Abstimmung vor Ort
+    verkehrsmittel: privater_pkw
+    gesamt_km: 42
+    startzeit: "09:00"
+    endzeit: "15:30"

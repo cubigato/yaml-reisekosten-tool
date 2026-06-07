@@ -6,15 +6,15 @@ Die geplante Modulstruktur und der Datenfluss fuer die erste Python-Implementier
 
 ## Nutzung
 
-Der Standardaufruf fuer die erste nutzbare Version ist:
+Nach der Installation ist der Standardaufruf:
 
 ```sh
-yaml-reisekosten-tool foo.yml
+yaml-reisekosten-tool examples/example.yml
 ```
 
-Ohne Zusatzargumente liest das Werkzeug genau diese YAML-Datei und schreibt die erzeugten PDF-Dateien in das aktuelle Arbeitsverzeichnis. Die Eingabedatei wird dabei nicht veraendert.
+Ohne Zusatzargumente liest das Werkzeug genau diese YAML-Datei und schreibt die erzeugten PDF-Dateien in das aktuelle Arbeitsverzeichnis. Die Eingabedatei wird dabei nicht veraendert. Bei Erfolg gibt die CLI die erzeugten PDF-Pfade auf stdout aus.
 
-PDF-Dateinamen werden aus Abrechnungszeitraum und Titel gebildet, zum Beispiel `2026-05-reisekosten-max-mustermann.pdf`. Wenn mehrere Abrechnungen in einer YAML-Datei erzeugt werden, erhalten sie nummerierte Suffixe wie `-01` und `-02`. Vorhandene PDFs werden standardmaessig nicht ueberschrieben; bei einer Namenskollision bricht die CLI mit einer klaren Fehlermeldung ab.
+PDF-Dateinamen werden aus Abrechnungszeitraum und Titel gebildet, zum Beispiel `2026-05_reisekosten-max-mustermann.pdf`. Wenn mehrere Abrechnungen in einer YAML-Datei erzeugt werden, erhalten sie nummerierte Suffixe wie `-01` und `-02`. Vorhandene PDFs werden standardmaessig nicht ueberschrieben; bei einer Namenskollision bricht die CLI mit einer klaren Fehlermeldung ab.
 
 Fuer den MVP sind nur wenige Optionen vorgesehen:
 
@@ -22,6 +22,19 @@ Fuer den MVP sind nur wenige Optionen vorgesehen:
 - `--force`: Bereits vorhandene Ziel-PDFs ueberschreiben.
 
 Fehlende Dateien, ungueltiges YAML, Schemafehler und Render-Fehler werden kurz auf stderr gemeldet und fuehren zu einem Exit-Code ungleich `0`. Details zum CLI- und Ausgabe-Kontrakt stehen in `ARCHITECTURE.md`.
+
+Typische Aufrufe:
+
+```sh
+yaml-reisekosten-tool examples/example.yml
+yaml-reisekosten-tool examples/example.yml --output-dir /tmp/reisekosten
+yaml-reisekosten-tool examples/example.yml --output-dir /tmp/reisekosten --force
+python -m yaml_reisekosten_tool examples/example.yml
+```
+
+`--output-dir` muss auf ein bereits existierendes, beschreibbares Verzeichnis zeigen. `--force` erlaubt das Ueberschreiben eines bereits vorhandenen Ziel-PDFs. Ohne `--force` wird nicht automatisch ein alternativer Dateiname erzeugt.
+
+Fuer die PDF-Erzeugung muss `typst` im `PATH` liegen. Ist Typst nicht installiert, endet der CLI-Lauf mit einer Meldung wie `Fehler: Typst ist nicht installiert oder nicht im PATH: typst`.
 
 ## Entwicklung
 
@@ -37,7 +50,7 @@ Alternativ funktioniert auch `python -m pip install -e ".[dev]"` in einer bereit
 Lokale Pruefbefehle:
 
 ```sh
-pytest
+.venv/bin/python -m pytest
 ruff check .
 ruff format --check .
 ```
@@ -48,9 +61,22 @@ Die paketierte CLI ist nach der Installation als `yaml-reisekosten-tool` erreich
 python -m yaml_reisekosten_tool
 ```
 
-## YAML-Format
+## Beispiele
 
-Ein Beispiel liegt unter `examples/example.yml`.
+Mehrere lauffaehige Beispiele liegen unter `examples/`:
+
+- `examples/example.yml`: Vollstaendigeres Hauptbeispiel mit Defaults, Auslagen und digitalen Unterschriften.
+- `examples/minimal.yml`: Kleinstes Beispiel ohne Defaults, Auslagen oder Unterschriften.
+- `examples/auslagen-und-overrides.yml`: Defaults fuer Fahrten und Auslagen mit einzelnen Overrides.
+- `examples/verpflegung-grenzfaelle.yml`: Grenzfall genau acht Stunden gegen mehr als acht Stunden Abwesenheit.
+
+Jedes Beispiel kann direkt ueber die CLI gerendert werden, sofern Typst installiert ist:
+
+```sh
+yaml-reisekosten-tool examples/minimal.yml --output-dir /tmp/reisekosten --force
+```
+
+## YAML-Format
 
 Die Eingabedatei besteht aktuell aus diesen Bereichen:
 

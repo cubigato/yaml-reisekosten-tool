@@ -1,0 +1,51 @@
+abrechnung:
+  titel: Auslagen und Overrides
+  zeitraum:
+    von: 2026-05-01
+    bis: 2026-05-31
+  waehrung: EUR
+
+mitarbeiter:
+  name: Oskar Beispiel
+  personalnummer: "98765"
+  abteilung: Vertrieb
+
+arbeitgeber:
+  name: Beispiel GmbH
+  anschrift:
+    strasse: Stadtweg 8
+    plz: "54321"
+    ort: Musterstadt
+
+defaults:
+  fahrt:
+    start: Zuhause
+    ziel: Kunde Nord
+    anlass: Kundentermin
+    verkehrsmittel: privater_pkw
+    fahrzeug:
+      kennzeichen: MS-OB 987
+      beschreibung: Privater Kombi
+    gesamt_km: 118
+    startzeit: "07:30"
+    endzeit: "18:15"
+  auslage:
+    art: parken
+    betrag_eur: 9.50
+    beschreibung: Parkhaus am Kundenstandort
+
+fahrten:
+  - datum: 2026-05-06
+
+  - datum: 2026-05-13
+    ziel: Kunde Sued
+    anlass: Workshop
+    gesamt_km: 146
+    auslage:
+      betrag_eur: 16.00
+      beschreibung: Tagesparkplatz Workshopzentrum
+
+  - datum: 2026-05-20
+    startzeit: "08:15"
+    endzeit: "16:45"
+    notiz: Kuerzerer Termin mit Rueckfahrt direkt nach Hause
