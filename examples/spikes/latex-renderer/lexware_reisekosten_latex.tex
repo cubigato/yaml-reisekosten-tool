@@ -1,0 +1,97 @@
+\documentclass[a4paper]{article}
+\usepackage[margin=0mm]{geometry}
+\usepackage{fontspec}
+\usepackage{xcolor}
+\usepackage{tikz}
+
+\setsansfont{Lato}[
+  UprightFont = *-Medium,
+  BoldFont = *-Heavy
+]
+\renewcommand{\familydefault}{\sfdefault}
+\pagestyle{empty}
+
+\definecolor{lexred}{HTML}{FF3850}
+
+\newcommand{\lineat}[3]{%
+  \draw[line width=0.55pt] ([xshift=#1mm,yshift=-#2mm]current page.north west) -- ++(#3mm,0);%
+}
+\newcommand{\textat}[4]{%
+  \node[anchor=north west, inner sep=0, font=\fontsize{#3}{#3}\selectfont] at ([xshift=#1mm,yshift=-#2mm]current page.north west) {#4};%
+}
+\newcommand{\titleat}[3]{%
+  \node[anchor=north west, inner sep=0, font=\fontsize{#3}{#3}\selectfont\bfseries] at ([xshift=#1mm,yshift=-#2mm]current page.north west) {#2};%
+}
+\newcommand{\sectiontitle}[3]{%
+  \node[anchor=north west, inner sep=0, font=\fontsize{12.2pt}{12.2pt}\selectfont\bfseries] at ([xshift=#1mm,yshift=-#2mm]current page.north west) {#3};%
+}
+\newcommand{\fieldline}[4]{%
+  \lineat{#1}{#2}{#3}%
+  \pgfmathsetmacro{\labely}{#2 + 2.6}%
+  \node[anchor=north west, inner sep=0, font=\fontsize{8.3pt}{8.3pt}\selectfont] at ([xshift=#1mm,yshift=-\labely mm]current page.north west) {#4};%
+}
+\newcommand{\radiobox}[3]{%
+  \draw[lexred, line width=0.55pt] ([xshift=#1mm,yshift=-#2mm]current page.north west) circle[radius=1.5mm];%
+  \node[anchor=north west, inner sep=0, font=\fontsize{8.8pt}{8.8pt}\selectfont] at ([xshift=#1mm,yshift=-#2mm]current page.north west) {\hspace{5.8mm}\raisebox{-0.2mm}{#3}};%
+}
+\newcommand{\checkbox}[3]{%
+  \draw[lexred, line width=0.55pt] ([xshift=#1mm,yshift=-#2mm]current page.north west) rectangle ++(3mm,-3mm);%
+  \node[anchor=north west, inner sep=0, font=\fontsize{8.8pt}{8.8pt}\selectfont] at ([xshift=#1mm,yshift=-#2mm]current page.north west) {\hspace{5.8mm}\raisebox{-0.4mm}{#3}};%
+}
+
+\begin{document}
+\begin{tikzpicture}[remember picture, overlay]
+\node[anchor=north west, inner sep=0, font=\fontsize{22.7pt}{22.7pt}\selectfont\bfseries] at ([xshift=15mm,yshift=-13.1mm]current page.north west) {Reisekostenabrechnung};
+\node[anchor=north west, inner sep=0, font=\fontsize{6.7pt}{6.7pt}\selectfont\bfseries] at ([xshift=178.9mm,yshift=-18.3mm]current page.north west) {(Stand 01.2026)};
+
+\sectiontitle{15}{30.9}{Mitarbeiterdaten}
+\fieldline{15}{44.5}{83.8}{Name d. Arbeitgebers}
+\fieldline{111.1}{44.5}{84}{Anschrift d. Arbeitgebers}
+\fieldline{15}{57.2}{83.8}{Vorname}
+\fieldline{111.1}{57.2}{84}{Nachname}
+\fieldline{15}{69.9}{83.8}{Personalnummer}
+\fieldline{111.1}{69.9}{84}{Abteilung}
+
+\sectiontitle{15}{85.9}{Reisedaten}
+\radiobox{16.5}{101.5}{Inlandsreise}
+\radiobox{45.9}{101.5}{Auslandsreise}
+\fieldline{15}{112.3}{33.7}{Reisebeginn (Datum)}
+\fieldline{61}{112.3}{33.7}{Reisebeginn (Uhrzeit)}
+\fieldline{106.8}{112.3}{37.9}{Reiseende (Datum)}
+\fieldline{157.2}{112.3}{37.9}{Reiseende (Uhrzeit)}
+\fieldline{15}{125}{180.2}{Reiseziel(e)}
+\fieldline{15}{137.7}{180.2}{Anlass der Reise}
+\checkbox{15}{150.8}{Dienstwagen}
+\checkbox{49.4}{150.8}{Privater PKW}
+\checkbox{83.3}{150.8}{Bahn}
+\checkbox{107.2}{150.8}{Flugzeug}
+\checkbox{136.2}{150.8}{Sonstiges:}
+\lineat{157.2}{153.2}{37.9}
+
+\sectiontitle{15}{166.3}{Kosten}
+\fieldline{15}{180}{180.2}{Fahrtkosten}
+\textat{15}{191.2}{8.3pt}{Verpflegungsmehraufwand:}
+\textat{15}{196.4}{7.4pt}{(8-24 Std. / An- \& Abreise)}
+\lineat{56.2}{195.2}{19.8}
+\fieldline{80.3}{195.2}{19.7}{pro Tag}
+\textat{97.4}{191.2}{8.3pt}{€}
+\textat{56.2}{197.9}{8.3pt}{Tage}
+\textat{109.6}{191.2}{8.3pt}{Verpflegungsmehraufwand:}
+\textat{109.6}{196.4}{7.4pt}{(ab 24 Std.)}
+\lineat{151.3}{195.2}{19.8}
+\fieldline{175.3}{195.2}{19.8}{pro Tag}
+\textat{192.6}{191.2}{8.3pt}{€}
+\textat{151.3}{197.9}{8.3pt}{Tage}
+\fieldline{15}{209.6}{180.2}{Abzüge für Frühstück, Mittag- oder Abendessen}
+\fieldline{15}{222.3}{83.8}{Übernachtungskosten}
+\fieldline{111.1}{222.3}{84}{Reisenebenkosten}
+\fieldline{15}{235}{180.2}{Gesamtkosten}
+
+\fieldline{15}{256.2}{62.9}{Ort, Datum Antragsteller}
+\fieldline{83.5}{256.2}{111.6}{Unterschrift Antragsteller}
+\fieldline{15}{268.9}{62.9}{Ort, Datum Vorgesetzter}
+\fieldline{83.5}{268.9}{111.6}{Unterschrift Vorgesetzter}
+\textat{152}{280.1}{6.3pt}{Diese Vorlage wurde erstellt von}
+\node[anchor=north west, inner sep=0, font=\fontsize{6.3pt}{6.3pt}\selectfont\bfseries, text=lexred] at ([xshift=187mm,yshift=-280.1mm]current page.north west) {Lexware};
+\end{tikzpicture}
+\end{document}
