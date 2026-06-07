@@ -5,7 +5,7 @@ status: Done
 assignee:
   - Codex
 created_date: '2026-06-07 15:18'
-updated_date: '2026-06-07 19:00'
+updated_date: '2026-06-07 20:26'
 labels:
   - architecture
   - python
@@ -18,7 +18,7 @@ modified_files:
   - AGENTS.md
 parent_task_id: TASK-1
 priority: high
-ordinal: 3000
+ordinal: 7000
 ---
 
 ## Description

@@ -26,6 +26,12 @@ def test_example_yaml_loads_to_domain_models() -> None:
     assert reisekosten.defaults.fahrt.fahrzeug.kennzeichen == "MS-MM 123"
     assert reisekosten.defaults.auslage is not None
     assert reisekosten.defaults.auslage.betrag_eur == Decimal("12.0")
+    assert reisekosten.unterschriften.antragsteller is not None
+    assert reisekosten.unterschriften.antragsteller.unterschrift == (
+        "examples/signatures/max-mustermann.png"
+    )
+    assert reisekosten.unterschriften.vorgesetzter is not None
+    assert reisekosten.unterschriften.vorgesetzter.name == "Erika Leitung"
     assert len(reisekosten.fahrten) == 5
     assert reisekosten.fahrten[0].datum == date(2026, 1, 8)
     assert reisekosten.fahrten[0].startzeit == time(7, 45)

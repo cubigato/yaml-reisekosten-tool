@@ -4,10 +4,10 @@ title: Zielbild / Architektur
 status: Done
 assignee: []
 created_date: '2026-06-07 15:11'
-updated_date: '2026-06-07 19:12'
+updated_date: '2026-06-07 20:26'
 labels: []
 dependencies: []
-ordinal: 5000
+ordinal: 9000
 ---
 
 ## Description

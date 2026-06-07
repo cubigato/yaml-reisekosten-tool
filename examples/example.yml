@@ -17,6 +17,18 @@ arbeitgeber:
     plz: "54321"
     ort: Musterstadt
 
+unterschriften:
+  antragsteller:
+    ort: Musterstadt
+    datum: 2026-03-31
+    name: Max Mustermann
+    unterschrift: examples/signatures/max-mustermann.png
+  vorgesetzter:
+    ort: Musterstadt
+    datum: 2026-04-02
+    name: Erika Leitung
+    unterschrift: examples/signatures/erika-leitung.png
+
 defaults:
   fahrt:
     start: Zuhause

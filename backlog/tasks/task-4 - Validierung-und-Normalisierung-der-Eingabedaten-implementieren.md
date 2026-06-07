@@ -5,7 +5,7 @@ status: Done
 assignee:
   - Codex
 created_date: '2026-06-07 19:10'
-updated_date: '2026-06-07 19:51'
+updated_date: '2026-06-07 20:26'
 labels:
   - implementation
   - validation
@@ -24,7 +24,7 @@ modified_files:
   - tests/test_models.py
   - tests/test_normalization.py
 priority: high
-ordinal: 1000
+ordinal: 2000
 ---
 
 ## Description

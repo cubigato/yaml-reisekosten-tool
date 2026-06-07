@@ -30,6 +30,7 @@ _REQUIRED_FAHRT = (
 )
 _REQUIRED_AUSLAGE = ("art", "betrag_eur", "beschreibung")
 _TIME_PATTERN = re.compile(r"^\d{2}:\d{2}$")
+_SIGNATURE_SUFFIXES = (".png", ".jpg", ".jpeg")
 
 
 def normalize_reisekosten_input(data: Mapping[str, Any]) -> ReisekostenEingabe:
@@ -56,12 +57,14 @@ def _normalize_root(data: Mapping[str, Any]) -> dict[str, Any]:
     defaults = _optional_mapping(root, "defaults", "defaults")
     default_fahrt = _optional_mapping(defaults, "fahrt", "defaults.fahrt")
     default_auslage = _optional_mapping(defaults, "auslage", "defaults.auslage")
+    unterschriften = _optional_mapping(root, "unterschriften", "unterschriften")
 
     normalized = {
         "abrechnung": _normalize_abrechnung(_require_mapping(root, "abrechnung", "abrechnung")),
         "mitarbeiter": _normalize_mitarbeiter(_require_mapping(root, "mitarbeiter", "mitarbeiter")),
         "arbeitgeber": _normalize_arbeitgeber(_require_mapping(root, "arbeitgeber", "arbeitgeber")),
         "defaults": _normalize_defaults(default_fahrt, default_auslage),
+        "unterschriften": _normalize_unterschriften(unterschriften),
         "fahrten": [],
     }
 
@@ -226,6 +229,44 @@ def _normalize_fahrzeug(data: Mapping[str, Any], path: str) -> dict[str, Any]:
             data.get("beschreibung"), f"{path}.beschreibung"
         ),
     }
+
+
+def _normalize_unterschriften(data: Mapping[str, Any]) -> dict[str, Any]:
+    normalized: dict[str, Any] = {}
+    if "antragsteller" in data:
+        normalized["antragsteller"] = _normalize_digitale_unterschrift(
+            _require_mapping(data, "antragsteller", "unterschriften.antragsteller"),
+            "unterschriften.antragsteller",
+        )
+    if "vorgesetzter" in data:
+        normalized["vorgesetzter"] = _normalize_digitale_unterschrift(
+            _require_mapping(data, "vorgesetzter", "unterschriften.vorgesetzter"),
+            "unterschriften.vorgesetzter",
+        )
+    return normalized
+
+
+def _normalize_digitale_unterschrift(data: Mapping[str, Any], path: str) -> dict[str, Any]:
+    normalized: dict[str, Any] = {}
+    for key in ("ort", "name"):
+        if key in data:
+            normalized[key] = _normalize_optional_string(data.get(key), f"{path}.{key}")
+    if "datum" in data:
+        normalized["datum"] = _normalize_date(data.get("datum"), f"{path}.datum")
+    if "unterschrift" in data:
+        normalized["unterschrift"] = _normalize_signature_path(
+            data.get("unterschrift"), f"{path}.unterschrift"
+        )
+    return normalized
+
+
+def _normalize_signature_path(value: Any, path: str) -> str | None:
+    normalized = _normalize_optional_string(value, path)
+    if normalized is None:
+        return None
+    if not normalized.lower().endswith(_SIGNATURE_SUFFIXES):
+        raise ValidationError(path, "muss auf .png, .jpg oder .jpeg enden")
+    return normalized
 
 
 def _require_fields(data: Mapping[str, Any], fields: tuple[str, ...], path: str) -> None:

@@ -5,7 +5,7 @@ status: Done
 assignee:
   - Codex
 created_date: '2026-06-07 15:18'
-updated_date: '2026-06-07 19:07'
+updated_date: '2026-06-07 20:26'
 labels:
   - architecture
   - cli
@@ -17,7 +17,7 @@ modified_files:
   - README.md
 parent_task_id: TASK-1
 priority: medium
-ordinal: 4000
+ordinal: 8000
 ---
 
 ## Description

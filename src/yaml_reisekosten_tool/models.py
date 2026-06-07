@@ -57,6 +57,20 @@ class Auslage:
 
 
 @dataclass(frozen=True)
+class DigitaleUnterschrift:
+    ort: str | None = None
+    datum: date | None = None
+    name: str | None = None
+    unterschrift: str | None = None
+
+
+@dataclass(frozen=True)
+class Unterschriften:
+    antragsteller: DigitaleUnterschrift | None = None
+    vorgesetzter: DigitaleUnterschrift | None = None
+
+
+@dataclass(frozen=True)
 class Fahrt:
     datum: date | None
     start: str | None = None
@@ -95,6 +109,7 @@ class ReisekostenEingabe:
     mitarbeiter: Mitarbeiter
     arbeitgeber: Arbeitgeber
     defaults: Defaults
+    unterschriften: Unterschriften
     fahrten: tuple[Fahrt, ...]
 
 
@@ -144,6 +159,7 @@ def models_from_mapping(data: Mapping[str, Any]) -> ReisekostenEingabe:
         mitarbeiter=_build_mitarbeiter(_mapping(data.get("mitarbeiter"))),
         arbeitgeber=_build_arbeitgeber(_mapping(data.get("arbeitgeber"))),
         defaults=_build_defaults(_mapping(data.get("defaults"))),
+        unterschriften=_build_unterschriften(_mapping(data.get("unterschriften"))),
         fahrten=tuple(_build_fahrt(_mapping(item)) for item in _sequence(data.get("fahrten"))),
     )
 
@@ -226,6 +242,30 @@ def _build_auslage(data: Mapping[str, Any]) -> Auslage:
         betrag_eur=data.get("betrag_eur"),
         beschreibung=data.get("beschreibung"),
         beleg=data.get("beleg"),
+    )
+
+
+def _build_unterschriften(data: Mapping[str, Any]) -> Unterschriften:
+    return Unterschriften(
+        antragsteller=(
+            _build_digitale_unterschrift(_mapping(data.get("antragsteller")))
+            if "antragsteller" in data
+            else None
+        ),
+        vorgesetzter=(
+            _build_digitale_unterschrift(_mapping(data.get("vorgesetzter")))
+            if "vorgesetzter" in data
+            else None
+        ),
+    )
+
+
+def _build_digitale_unterschrift(data: Mapping[str, Any]) -> DigitaleUnterschrift:
+    return DigitaleUnterschrift(
+        ort=data.get("ort"),
+        datum=data.get("datum"),
+        name=data.get("name"),
+        unterschrift=data.get("unterschrift"),
     )
 
 

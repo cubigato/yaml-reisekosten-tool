@@ -58,6 +58,7 @@ Die Eingabedatei besteht aktuell aus diesen Bereichen:
 - `mitarbeiter`: Angaben zur abrechnenden Person.
 - `arbeitgeber`: Angaben zum Arbeitgeber aus der Reisekostenabrechnung.
 - `defaults`: Wiederkehrende Werte fuer Fahrten und Auslagen.
+- `unterschriften`: Optionale Angaben fuer digitale Unterschriftsfelder.
 - `fahrten`: Liste der einzelnen Reisen oder Kundenfahrten.
 
 ### Defaults und Overrides
@@ -112,6 +113,17 @@ Gleiches gilt fuer Auslagen: Wiederkehrendes Parken kann unter `defaults.auslage
 - `beschreibung`: Beschreibung der Auslage.
 - `beleg`: Optionaler Pfad zu einem Beleg.
 
+`unterschriften`:
+
+- `antragsteller.ort`: Optionaler Ort fuer die digitale Antragstellerzeile.
+- `antragsteller.datum`: Optionales Datum im Format `YYYY-MM-DD`. Ohne Angabe wird das Ende des Abrechnungszeitraums gerendert.
+- `antragsteller.name`: Optionaler Name. Ohne Angabe wird `mitarbeiter.name` gerendert.
+- `antragsteller.unterschrift`: Optionaler Pfad zu einer Unterschrift als PNG, JPG oder JPEG.
+- `vorgesetzter.ort`: Optionaler Ort fuer die digitale Vorgesetztenzeile.
+- `vorgesetzter.datum`: Optionales Datum im Format `YYYY-MM-DD`.
+- `vorgesetzter.name`: Optionaler Name.
+- `vorgesetzter.unterschrift`: Optionaler Pfad zu einer Unterschrift als PNG, JPG oder JPEG.
+
 ## Entscheidungen
 
 Es gibt keine automatische Verknuepfung zwischen `arbeitgeber` und `defaults.fahrt.ziel`. Der Arbeitgeber ist ein Feld der Abrechnung; das Fahrtziel ist eine explizite Eingabe.
@@ -137,3 +149,7 @@ Auslagen an Fahrten werden separat als Auslagenpositionen gehalten und zusaetzli
 ## Architektur
 
 Siehe `ARCHITECTURE.md` fuer den geplanten Zuschnitt von CLI, YAML-I/O, Validierung, Normalisierung, Berechnung und Typst-Rendering.
+
+## Lizenzhinweis
+
+Der Projektcode steht unter der Lizenz in `LICENSE`. Diese Projektlizenz gilt nicht fuer die originale Lexware-Vorlage bzw. Lexware-Referenzdateien unter `examples/`; diese bleiben urheberrechtlich Lexware zugeordnet.

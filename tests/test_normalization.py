@@ -76,6 +76,26 @@ def test_normalize_keeps_fahrt_and_auslage_overrides() -> None:
     assert fahrt.auslage.beschreibung == "Ausweichparkhaus"
 
 
+def test_normalize_accepts_digital_signature_data() -> None:
+    data = _valid_input()
+    data["unterschriften"] = {
+        "antragsteller": {
+            "ort": "Musterstadt",
+            "datum": "2026-01-31",
+            "name": "Max Mustermann",
+            "unterschrift": "signatures/max.png",
+        },
+        "vorgesetzter": {"name": "Erika Leitung", "unterschrift": "signatures/erika.jpg"},
+    }
+
+    reisekosten = normalize_reisekosten_input(data)
+
+    assert reisekosten.unterschriften.antragsteller is not None
+    assert reisekosten.unterschriften.antragsteller.unterschrift == "signatures/max.png"
+    assert reisekosten.unterschriften.vorgesetzter is not None
+    assert reisekosten.unterschriften.vorgesetzter.unterschrift == "signatures/erika.jpg"
+
+
 def test_normalize_reports_missing_required_field_with_path() -> None:
     data = _valid_input()
     del data["arbeitgeber"]["anschrift"]["plz"]
@@ -114,3 +134,15 @@ def test_normalize_rejects_missing_fahrten() -> None:
         normalize_reisekosten_input(data)
 
     assert exc_info.value.field_path == "fahrten"
+
+
+def test_normalize_rejects_unsupported_signature_image_suffix() -> None:
+    data = _valid_input()
+    data["unterschriften"] = {
+        "antragsteller": {"unterschrift": "signatures/max.svg"},
+    }
+
+    with pytest.raises(ValidationError) as exc_info:
+        normalize_reisekosten_input(data)
+
+    assert exc_info.value.field_path == "unterschriften.antragsteller.unterschrift"

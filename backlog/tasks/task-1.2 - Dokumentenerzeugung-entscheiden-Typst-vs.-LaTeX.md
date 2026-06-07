@@ -5,7 +5,7 @@ status: Done
 assignee:
   - '@Codex'
 created_date: '2026-06-07 15:18'
-updated_date: '2026-06-07 18:44'
+updated_date: '2026-06-07 20:26'
 labels:
   - architecture
   - pdf
@@ -25,7 +25,7 @@ modified_files:
   - examples/spikes/latex-renderer/lexware_reisekosten_latex.log
 parent_task_id: TASK-1
 priority: high
-ordinal: 1000
+ordinal: 5000
 ---
 
 ## Description
