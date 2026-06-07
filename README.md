@@ -23,6 +23,31 @@ Fuer den MVP sind nur wenige Optionen vorgesehen:
 
 Fehlende Dateien, ungueltiges YAML, Schemafehler und Render-Fehler werden kurz auf stderr gemeldet und fuehren zu einem Exit-Code ungleich `0`. Details zum CLI- und Ausgabe-Kontrakt stehen in `ARCHITECTURE.md`.
 
+## Entwicklung
+
+Empfohlen ist eine lokale Installation in eine virtuelle Umgebung, zum Beispiel mit `uv`:
+
+```sh
+uv venv
+uv pip install -e ".[dev]"
+```
+
+Alternativ funktioniert auch `python -m pip install -e ".[dev]"` in einer bereits aktivierten virtuellen Umgebung.
+
+Lokale Pruefbefehle:
+
+```sh
+pytest
+ruff check .
+ruff format --check .
+```
+
+Die paketierte CLI ist nach der Installation als `yaml-reisekosten-tool` erreichbar. Der gleichwertige Modulaufruf nutzt denselben Einstieg:
+
+```sh
+python -m yaml_reisekosten_tool
+```
+
 ## YAML-Format
 
 Ein Beispiel liegt unter `examples/example.yml`.

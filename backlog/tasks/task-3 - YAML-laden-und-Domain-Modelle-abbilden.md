@@ -1,9 +1,10 @@
 ---
 id: TASK-3
 title: YAML laden und Domain-Modelle abbilden
-status: To Do
+status: next
 assignee: []
 created_date: '2026-06-07 19:10'
+updated_date: '2026-06-07 19:26'
 labels:
   - implementation
   - yaml
@@ -15,7 +16,7 @@ documentation:
   - ARCHITECTURE.md
   - examples/example.yml
 priority: high
-ordinal: 3000
+ordinal: 1000
 ---
 
 ## Description
