@@ -4,13 +4,15 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
+from datetime import date, time
+from decimal import Decimal
 from typing import Any
 
 
 @dataclass(frozen=True)
 class Zeitraum:
-    von: Any
-    bis: Any
+    von: date
+    bis: date
 
 
 @dataclass(frozen=True)
@@ -49,22 +51,22 @@ class Fahrzeug:
 @dataclass(frozen=True)
 class Auslage:
     art: str | None
-    betrag_eur: Any
+    betrag_eur: Decimal | None
     beschreibung: str | None
     beleg: str | None = None
 
 
 @dataclass(frozen=True)
 class Fahrt:
-    datum: Any
+    datum: date | None
     start: str | None = None
     ziel: str | None = None
     anlass: str | None = None
     verkehrsmittel: str | None = None
     fahrzeug: Fahrzeug | None = None
-    gesamt_km: Any = None
-    startzeit: str | None = None
-    endzeit: str | None = None
+    gesamt_km: Decimal | None = None
+    startzeit: time | None = None
+    endzeit: time | None = None
     notiz: str | None = None
     auslage: Auslage | None = None
 
@@ -76,9 +78,9 @@ class FahrtDefaults:
     anlass: str | None = None
     verkehrsmittel: str | None = None
     fahrzeug: Fahrzeug | None = None
-    gesamt_km: Any = None
-    startzeit: str | None = None
-    endzeit: str | None = None
+    gesamt_km: Decimal | None = None
+    startzeit: time | None = None
+    endzeit: time | None = None
 
 
 @dataclass(frozen=True)

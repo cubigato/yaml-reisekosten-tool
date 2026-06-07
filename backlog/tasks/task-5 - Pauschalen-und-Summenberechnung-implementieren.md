@@ -4,6 +4,7 @@ title: Pauschalen und Summenberechnung implementieren
 status: To Do
 assignee: []
 created_date: '2026-06-07 19:11'
+updated_date: '2026-06-07 19:47'
 labels:
   - implementation
   - calculation
@@ -14,13 +15,15 @@ documentation:
   - ARCHITECTURE.md
   - examples/example.yml
 priority: high
-ordinal: 5000
+ordinal: 3000
 ---
 
 ## Description
 
 <!-- SECTION:DESCRIPTION:BEGIN -->
 Implementiert die fachliche Berechnungsschicht der Reisekostenabrechnung. Aus den normalisierten Fahrten und Auslagen werden Kilometerkosten, Verpflegungsmehraufwand und Gesamtsummen berechnet. Die Software verwendet interne Jahrestabellen statt Werte aus dem YAML; fehlende Tabellenjahre werden als fachlicher Fehler gemeldet. Rendering und CLI-Ausgabe sind nicht Bestandteil dieser Aufgabe.
+
+Für die Implementierung werden im ersten Schritt fachliche Werte für 2026 und falls verfügbar 2027 recherchiert.
 <!-- SECTION:DESCRIPTION:END -->
 
 ## Acceptance Criteria
