@@ -12,7 +12,9 @@ Der MVP bleibt bewusst linear:
 4. Die normalisierten Daten werden in Python-Domain-Objekte ueberfuehrt.
 5. Pauschalen und Summen werden anhand interner Regeln berechnet.
 6. Ein Typst-Template wird mit den berechneten Daten gerendert.
-7. Das erzeugte PDF wird an den gewuenschten Ausgabepfad geschrieben.
+7. Je Fahrt wird ein Lexware-konformes PDF an den gewuenschten Ausgabepfad geschrieben.
+
+Die Lexware-Vorlage modelliert ein einzelnes Reisekostenformular mit Reisebeginn und Reiseende, aber keine Fahrtenliste. Deshalb entspricht im MVP jeder Eintrag unter `fahrten` einer eigenen Reise und wird als eigenes PDF gerendert.
 
 Es gibt keine Datenbank, keine Web- oder GUI-Schicht und keine parallele Renderer-Abstraktion. Typst ist der Renderer fuer den MVP.
 
@@ -36,7 +38,7 @@ Die Implementierung soll unter `src/yaml_reisekosten_tool/` wachsen. Die folgend
 
 Der Datenfluss ist absichtlich eine Pipeline mit klaren Fehlergrenzen:
 
-1. `cli.py` ermittelt `input.yml` und `output.pdf`.
+1. `cli.py` ermittelt `input.yml` und die PDF-Ausgabepfade.
 2. `yaml_io.py` liest die Datei und liefert ein rohes Mapping.
 3. `validation.py` prueft die grobe Struktur und meldet fehlende oder unerwartete Felder.
 4. `normalization.py` merged `defaults.fahrt` und `defaults.auslage` in die einzelnen Eintraege.
@@ -44,8 +46,9 @@ Der Datenfluss ist absichtlich eine Pipeline mit klaren Fehlergrenzen:
 6. `models.py` nimmt die normalisierten Daten als Dataclasses auf.
 7. `rates.py` liefert die fuer das Reisedatum gueltigen Pauschalwerte.
 8. `calculation.py` bildet aus Domain-Modell und Pauschalen die berechnete Abrechnung.
-9. `rendering.py` uebersetzt die berechnete Abrechnung in einen Typst-Render-Kontext.
-10. `rendering.py` ruft Typst auf und schreibt das PDF.
+9. `cli.py` teilt die berechnete Abrechnung in einzelne Render-Abrechnungen pro Fahrt auf.
+10. `rendering.py` uebersetzt jede einzelne Render-Abrechnung in einen Typst-Render-Kontext.
+11. `rendering.py` ruft Typst auf und schreibt die PDFs.
 
 Die Pipeline soll in Tests stufenweise pruefbar sein. Besonders wichtig sind Tests fuer Default/Override-Verhalten, Datums- und Uhrzeitnormalisierung, Summenbildung und die Parameter, mit denen Typst aufgerufen wird.
 
@@ -72,17 +75,20 @@ Der erste nutzbare CLI-Einstieg ist bewusst klein:
 yaml-reisekosten-tool foo.yml
 ```
 
-Der Aufruf nimmt genau eine YAML-Datei als Eingabe. Ohne weitere Optionen schreibt das Werkzeug die erzeugten PDF-Dateien in das aktuelle Arbeitsverzeichnis, also in das Verzeichnis, aus dem der Befehl gestartet wurde. Die Eingabedatei wird nie veraendert. Im Erfolgsfall soll die CLI hoechstens die erzeugten PDF-Pfade ausgeben und keinen weiteren Arbeitsmuell im aktuellen Verzeichnis hinterlassen.
+Der Aufruf nimmt genau eine YAML-Datei als Eingabe. Ohne weitere Optionen schreibt das Werkzeug die erzeugten PDF-Dateien und eine Markdown-Zusammenfassung in das aktuelle Arbeitsverzeichnis, also in das Verzeichnis, aus dem der Befehl gestartet wurde. Die Eingabedatei wird nie veraendert. Im Erfolgsfall soll die CLI die erzeugten PDF-Pfade und danach den Pfad der Markdown-Zusammenfassung ausgeben und keinen weiteren Arbeitsmuell im aktuellen Verzeichnis hinterlassen.
+
+Im aktuellen YAML-MVP erzeugt eine YAML-Datei eine fachliche Eingabe mit einer Liste einzelner Reisen. Jede Fahrt wird in ein eigenes Lexware-Formular gerendert, damit Reisebeginn und Reiseende immer eine einzelne Reise beschreiben. Bei mehreren Fahrten gibt die CLI mehrere PDF-Pfade aus. Die Markdown-Zusammenfassung ist eine interne Kontrollausgabe mit Einzelbetraegen und Gesamtbetrag ueber alle erzeugten PDFs; sie ist bewusst nicht Teil der Lexware-Form.
 
 ### PDF-Dateinamen
 
 Dateinamen sollen stabil, lesbar und shell-freundlich sein:
 
-- Basis ist ein Slug aus dem Abrechnungszeitraum und dem Abrechnungstitel, zum Beispiel `2026-05_reisekosten_max-mustermann.pdf`.
+- Basis ist ein Slug aus Fahrtdatum und Abrechnungstitel, zum Beispiel `2026-05-04_reisekosten_max-mustermann.pdf`. Bei mehrtaegigen Reisen wird der Starttag verwendet.
 - Wenn kein brauchbarer Titel vorhanden ist, wird der Basisname der Eingabedatei verwendet, zum Beispiel `foo.pdf`.
 - Slugs verwenden Kleinbuchstaben, ASCII-Umschreibungen, Bindestriche statt Leerzeichen und keine Sonderzeichen, die auf ueblichen Dateisystemen Probleme machen.
-- Bei mehreren Abrechnungen aus einer YAML-Datei bekommt jede PDF-Datei denselben Basis-Slug plus einen eindeutigen Suffix, zum Beispiel `2026-05_reisekosten_max-mustermann-01.pdf` und `2026-05_reisekosten_max-mustermann-02.pdf`.
-- Eine vorhandene PDF-Datei wird standardmaessig nicht ueberschrieben. Bei Namenskollision bricht die CLI mit einer klaren Fehlermeldung ab und nennt den betroffenen Zielpfad.
+- Bei mehreren Fahrten an unterschiedlichen Tagen reicht das vorangestellte Fahrtdatum zur Unterscheidung. Nur wenn mehrere Fahrten denselben Tag und denselben Basisnamen haben, bekommen die spaeteren PDF-Dateien einen eindeutigen Suffix, zum Beispiel `2026-05-04_reisekosten_max-mustermann.pdf` und `2026-05-04_reisekosten_max-mustermann-02.pdf`.
+- Die Markdown-Zusammenfassung nutzt denselben Zeitraum-/Titel-Basisnamen mit `_zusammenfassung.md`, zum Beispiel `2026-05_reisekosten_max-mustermann_zusammenfassung.md`.
+- Eine vorhandene Ausgabedatei wird standardmaessig nicht ueberschrieben. Bei Namenskollision bricht die CLI mit einer klaren Fehlermeldung ab und nennt den betroffenen Zielpfad.
 - Automatische Suffixe zur Kollisionsvermeidung wie `-2` werden nicht stillschweigend vergeben, weil wiederholte Abrechnungslaeufe sonst unbemerkt alte und neue Ergebnisse mischen koennen.
 
 ### Fehlerverhalten
@@ -94,14 +100,14 @@ Alle erwartbaren Fehler werden als kurze, nutzbare Meldung auf stderr ausgegeben
 - Ungueltige Struktur oder Feldwerte: Abbruch mit Feldpfad, Problem und nach Moeglichkeit erwartetem Format, zum Beispiel `fahrten[3].datum`.
 - Fachliche Fehler: Abbruch mit konkreter Ursache, etwa fehlende Pauschalentabelle fuer ein Jahr oder unplausible Zeiten.
 - Render-Fehler: Abbruch mit Hinweis auf Typst, Template oder Render-Ausgabe; falls Typst fehlt, nennt die Meldung die fehlende Runtime.
-- Ausgabekollision oder nicht beschreibbares Ausgabeverzeichnis: Abbruch vor dem Rendern oder vor dem finalen Schreiben, ohne vorhandene PDFs zu veraendern.
+- Ausgabekollision oder nicht beschreibbares Ausgabeverzeichnis: Abbruch vor dem Rendern oder vor dem finalen Schreiben, ohne vorhandene Ausgabedateien zu veraendern.
 
 ### Optionale CLI-Argumente im MVP
 
 Fuer die erste Version werden nur Optionen aufgenommen, die den einfachen Standardaufruf nicht verkomplizieren:
 
 - `--output-dir DIR`: Schreibt die PDF-Dateien in `DIR` statt in das aktuelle Arbeitsverzeichnis. Das Verzeichnis muss existieren und beschreibbar sein.
-- `--force`: Erlaubt das Ueberschreiben bereits vorhandener Ziel-PDFs. Ohne diese Option ist Ueberschreiben verboten.
+- `--force`: Erlaubt das Ueberschreiben bereits vorhandener PDFs und Markdown-Zusammenfassungen. Ohne diese Option ist Ueberschreiben verboten.
 
 Bewusst nicht Teil des MVP sind interaktive Prompts, Konfigurationsdateien, Batch-Verzeichnisse als Eingabe, mehrere Renderer, JSON-Logging, Watch-Modus, Dry-Run, Auswahl einzelner Abrechnungen und ein frei waehlbarer einzelner Output-Dateiname. Diese Optionen koennen spaeter als eigene Produktentscheidungen ergaenzt werden, wenn die einfache Pipeline stabil ist.
 

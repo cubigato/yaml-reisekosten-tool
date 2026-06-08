@@ -8,7 +8,7 @@ import pytest
 
 import yaml_reisekosten_tool
 from yaml_reisekosten_tool import cli
-from yaml_reisekosten_tool.cli import build_output_paths, main
+from yaml_reisekosten_tool.cli import build_output_paths, main, split_abrechnung_by_fahrt
 from yaml_reisekosten_tool.rendering import RenderingError
 
 
@@ -45,6 +45,10 @@ fahrten:
 def _write_valid_yaml(path: Path) -> Path:
     path.write_text(_valid_yaml(), encoding="utf-8")
     return path
+
+
+def _summary_path(output_dir: Path) -> Path:
+    return output_dir / "2026-01_reisekosten-max-mustermann_zusammenfassung.md"
 
 
 @pytest.fixture
@@ -96,12 +100,14 @@ def test_cli_renders_valid_input_to_current_directory(
 
     exit_code = main([str(input_file)])
 
-    output_path = tmp_path / "2026-01_reisekosten-max-mustermann.pdf"
+    output_path = tmp_path / "2026-01-08_reisekosten-max-mustermann.pdf"
+    summary_path = _summary_path(tmp_path)
     captured = capsys.readouterr()
     assert exit_code == 0
-    assert captured.out.strip() == str(output_path)
+    assert captured.out.splitlines() == [str(output_path), str(summary_path)]
     assert captured.err == ""
     assert output_path.read_bytes() == b"%PDF-1.7"
+    assert "Gesamtbetrag: 39,20 EUR" in summary_path.read_text(encoding="utf-8")
     assert fake_renderer[0][1] == output_path
 
 
@@ -116,11 +122,75 @@ def test_cli_output_dir_writes_to_existing_directory(
 
     exit_code = main([str(input_file), "--output-dir", str(output_dir)])
 
-    output_path = output_dir / "2026-01_reisekosten-max-mustermann.pdf"
+    output_path = output_dir / "2026-01-08_reisekosten-max-mustermann.pdf"
+    summary_path = _summary_path(output_dir)
     captured = capsys.readouterr()
     assert exit_code == 0
-    assert captured.out.strip() == str(output_path)
+    assert captured.out.splitlines() == [str(output_path), str(summary_path)]
     assert output_path.is_file()
+    assert summary_path.is_file()
+
+
+def test_cli_renders_each_fahrt_to_separate_pdf(
+    tmp_path: Path,
+    fake_renderer,
+    capsys,
+) -> None:
+    input_file = _write_valid_yaml(tmp_path / "foo.yml")
+    content = input_file.read_text(encoding="utf-8").replace(
+        "fahrten:\n  - datum: 2026-01-08\n",
+        "fahrten:\n  - datum: 2026-01-08\n  - datum: 2026-01-15\n",
+    )
+    input_file.write_text(content, encoding="utf-8")
+    output_dir = tmp_path / "out"
+    output_dir.mkdir()
+
+    exit_code = main([str(input_file), "--output-dir", str(output_dir)])
+
+    expected_paths = (
+        output_dir / "2026-01-08_reisekosten-max-mustermann.pdf",
+        output_dir / "2026-01-15_reisekosten-max-mustermann.pdf",
+    )
+    summary_path = _summary_path(output_dir)
+    captured = capsys.readouterr()
+    assert exit_code == 0
+    assert captured.out.splitlines() == [str(path) for path in (*expected_paths, summary_path)]
+    assert [call[1] for call in fake_renderer] == list(expected_paths)
+    assert [call[0].fahrten[0].fahrt.datum.isoformat() for call in fake_renderer] == [
+        "2026-01-08",
+        "2026-01-15",
+    ]
+    summary = summary_path.read_text(encoding="utf-8")
+    assert "2026-01-08_reisekosten-max-mustermann.pdf" in summary
+    assert "2026-01-15_reisekosten-max-mustermann.pdf" in summary
+    assert "**Gesamtbetrag:** 78,40 EUR" in summary
+
+
+def test_cli_adds_suffix_only_for_multiple_fahrten_on_same_day(
+    tmp_path: Path,
+    fake_renderer,
+    capsys,
+) -> None:
+    input_file = _write_valid_yaml(tmp_path / "foo.yml")
+    content = input_file.read_text(encoding="utf-8").replace(
+        "fahrten:\n  - datum: 2026-01-08\n",
+        "fahrten:\n  - datum: 2026-01-08\n  - datum: 2026-01-08\n",
+    )
+    input_file.write_text(content, encoding="utf-8")
+    output_dir = tmp_path / "out"
+    output_dir.mkdir()
+
+    exit_code = main([str(input_file), "--output-dir", str(output_dir)])
+
+    expected_paths = (
+        output_dir / "2026-01-08_reisekosten-max-mustermann.pdf",
+        output_dir / "2026-01-08_reisekosten-max-mustermann-02.pdf",
+    )
+    summary_path = _summary_path(output_dir)
+    captured = capsys.readouterr()
+    assert exit_code == 0
+    assert captured.out.splitlines() == [str(path) for path in (*expected_paths, summary_path)]
+    assert [call[1] for call in fake_renderer] == list(expected_paths)
 
 
 def test_cli_rejects_invalid_output_dir(tmp_path: Path, capsys) -> None:
@@ -140,7 +210,7 @@ def test_cli_rejects_existing_pdf_without_force(
     capsys,
 ) -> None:
     input_file = _write_valid_yaml(tmp_path / "foo.yml")
-    existing_pdf = tmp_path / "2026-01_reisekosten-max-mustermann.pdf"
+    existing_pdf = tmp_path / "2026-01-08_reisekosten-max-mustermann.pdf"
     existing_pdf.write_bytes(b"old")
     monkeypatch.chdir(tmp_path)
 
@@ -148,8 +218,28 @@ def test_cli_rejects_existing_pdf_without_force(
 
     captured = capsys.readouterr()
     assert exit_code == 1
-    assert "Ziel-PDF existiert bereits" in captured.err
+    assert "Zieldatei existiert bereits" in captured.err
     assert existing_pdf.read_bytes() == b"old"
+    assert fake_renderer == []
+
+
+def test_cli_rejects_existing_summary_without_force(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    fake_renderer,
+    capsys,
+) -> None:
+    input_file = _write_valid_yaml(tmp_path / "foo.yml")
+    existing_summary = _summary_path(tmp_path)
+    existing_summary.write_text("old", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+
+    exit_code = main([str(input_file)])
+
+    captured = capsys.readouterr()
+    assert exit_code == 1
+    assert "Zieldatei existiert bereits" in captured.err
+    assert existing_summary.read_text(encoding="utf-8") == "old"
     assert fake_renderer == []
 
 
@@ -159,7 +249,7 @@ def test_cli_force_allows_overwriting_existing_pdf(
     fake_renderer,
 ) -> None:
     input_file = _write_valid_yaml(tmp_path / "foo.yml")
-    existing_pdf = tmp_path / "2026-01_reisekosten-max-mustermann.pdf"
+    existing_pdf = tmp_path / "2026-01-08_reisekosten-max-mustermann.pdf"
     existing_pdf.write_bytes(b"old")
     monkeypatch.chdir(tmp_path)
 
@@ -183,9 +273,55 @@ def test_build_output_paths_adds_suffix_for_multiple_abrechnungen(tmp_path: Path
     )
 
     assert paths == (
-        tmp_path / "2026-01_reisekosten-max-mustermann-01.pdf",
-        tmp_path / "2026-01_reisekosten-max-mustermann-02.pdf",
+        tmp_path / "2026-01-08_reisekosten-max-mustermann.pdf",
+        tmp_path / "2026-01-08_reisekosten-max-mustermann-02.pdf",
     )
+
+
+def test_build_output_paths_uses_first_trip_date_for_grouped_abrechnung(tmp_path: Path) -> None:
+    input_file = _write_valid_yaml(tmp_path / "foo.yml")
+    content = input_file.read_text(encoding="utf-8").replace(
+        "fahrten:\n  - datum: 2026-01-08\n",
+        "fahrten:\n  - datum: 2026-01-15\n  - datum: 2026-01-08\n",
+    )
+    input_file.write_text(content, encoding="utf-8")
+    data = cli.load_yaml_mapping(input_file)
+    eingabe = cli.normalize_reisekosten_input(data)
+    abrechnung = cli.calculate_reisekosten(eingabe)
+
+    paths = build_output_paths((abrechnung,), output_dir=tmp_path, input_file=input_file)
+
+    assert paths == (tmp_path / "2026-01-08_reisekosten-max-mustermann.pdf",)
+
+
+def test_split_abrechnung_by_fahrt_keeps_single_form_totals(tmp_path: Path) -> None:
+    input_file = _write_valid_yaml(tmp_path / "foo.yml")
+    content = input_file.read_text(encoding="utf-8").replace(
+        "fahrten:\n  - datum: 2026-01-08\n",
+        """
+fahrten:
+  - datum: 2026-01-08
+  - datum: 2026-01-15
+    gesamt_km: 100
+""",
+    )
+    input_file.write_text(content, encoding="utf-8")
+    data = cli.load_yaml_mapping(input_file)
+    eingabe = cli.normalize_reisekosten_input(data)
+    abrechnung = cli.calculate_reisekosten(eingabe)
+
+    split = split_abrechnung_by_fahrt(abrechnung)
+
+    assert len(split) == 2
+    assert [len(item.fahrten) for item in split] == [1, 1]
+    assert [item.summen.fahrtkosten_eur for item in split] == [
+        split[0].fahrten[0].fahrtkosten_eur,
+        split[1].fahrten[0].fahrtkosten_eur,
+    ]
+    assert [item.summen.gesamt_eur for item in split] == [
+        split[0].fahrten[0].gesamt_eur,
+        split[1].fahrten[0].gesamt_eur,
+    ]
 
 
 def test_cli_reports_missing_input_file(tmp_path: Path, capsys) -> None:

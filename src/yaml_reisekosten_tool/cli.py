@@ -8,10 +8,12 @@ import re
 import sys
 import unicodedata
 from collections.abc import Sequence
+from dataclasses import replace
+from decimal import Decimal
 from pathlib import Path
 
 from yaml_reisekosten_tool.calculation import CalculationError, calculate_reisekosten
-from yaml_reisekosten_tool.models import BerechneteAbrechnung
+from yaml_reisekosten_tool.models import BerechneteAbrechnung, BerechnungsSummen
 from yaml_reisekosten_tool.normalization import normalize_reisekosten_input
 from yaml_reisekosten_tool.rates import RatesError
 from yaml_reisekosten_tool.rendering import RenderingError, render_pdf
@@ -47,7 +49,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--force",
         action="store_true",
-        help="Vorhandene Ziel-PDFs ueberschreiben.",
+        help="Vorhandene Zieldateien ueberschreiben.",
     )
     return parser
 
@@ -65,12 +67,18 @@ def main(argv: Sequence[str] | None = None) -> int:
         data = load_yaml_mapping(args.input_file)
         eingabe = normalize_reisekosten_input(data)
         abrechnung = calculate_reisekosten(eingabe)
+        abrechnungen = split_abrechnung_by_fahrt(abrechnung)
         output_paths = build_output_paths(
-            (abrechnung,),
+            abrechnungen,
             output_dir=output_dir,
             input_file=args.input_file,
         )
-        _ensure_no_collisions(output_paths, force=args.force)
+        summary_path = build_summary_path(
+            abrechnung,
+            output_dir=output_dir,
+            input_file=args.input_file,
+        )
+        _ensure_no_collisions((*output_paths, summary_path), force=args.force)
 
         rendered_paths = [
             render_pdf(
@@ -78,8 +86,9 @@ def main(argv: Sequence[str] | None = None) -> int:
                 output_path,
                 asset_base_dir=Path.cwd(),
             )
-            for item, output_path in zip((abrechnung,), output_paths, strict=True)
+            for item, output_path in zip(abrechnungen, output_paths, strict=True)
         ]
+        write_summary_markdown(abrechnungen, rendered_paths, summary_path)
     except (
         CliError,
         YamlLoadError,
@@ -93,6 +102,7 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     for path in rendered_paths:
         print(path)
+    print(summary_path)
     return 0
 
 
@@ -104,11 +114,102 @@ def build_output_paths(
 ) -> tuple[Path, ...]:
     """Bilde stabile PDF-Zielpfade fuer eine oder mehrere berechnete Abrechnungen."""
 
-    total = len(abrechnungen)
-    return tuple(
-        output_dir / _output_filename(abrechnung, input_file=input_file, index=index, total=total)
-        for index, abrechnung in enumerate(abrechnungen, start=1)
-    )
+    filenames = [_output_filename(abrechnung, input_file=input_file) for abrechnung in abrechnungen]
+    return tuple(output_dir / filename for filename in _deduplicate_filenames(filenames))
+
+
+def build_summary_path(
+    abrechnung: BerechneteAbrechnung,
+    *,
+    output_dir: Path,
+    input_file: Path,
+) -> Path:
+    """Bilde den Zielpfad fuer die interne Markdown-Zusammenfassung."""
+
+    base = _summary_base_name(abrechnung, input_file=input_file)
+    return output_dir / f"{base}_zusammenfassung.md"
+
+
+def write_summary_markdown(
+    abrechnungen: Sequence[BerechneteAbrechnung],
+    pdf_paths: Sequence[Path],
+    summary_path: Path,
+) -> Path:
+    """Schreibe eine interne Markdown-Zusammenfassung aller erzeugten PDFs."""
+
+    if len(abrechnungen) != len(pdf_paths):
+        raise CliError("Interner Fehler: Anzahl Abrechnungen und PDFs passt nicht zusammen")
+
+    currency = abrechnungen[0].eingabe.abrechnung.waehrung if abrechnungen else "EUR"
+    total = sum((item.summen.gesamt_eur for item in abrechnungen), Decimal("0.00"))
+    lines = [
+        f"# {_markdown_text(_summary_title(abrechnungen))}",
+        "",
+        f"- Anzahl Abrechnungen: {len(abrechnungen)}",
+        f"- Gesamtbetrag: {_format_money(total)} {currency or 'EUR'}",
+        "",
+        "| PDF | Datum | Zeit | Ziel | Anlass | Fahrtkosten | Verpflegung | Auslagen | Gesamt |",
+        "| --- | --- | --- | --- | --- | ---: | ---: | ---: | ---: |",
+    ]
+
+    for abrechnung, pdf_path in zip(abrechnungen, pdf_paths, strict=True):
+        fahrt = abrechnung.fahrten[0].fahrt if abrechnung.fahrten else None
+        lines.append(
+            "| "
+            + " | ".join(
+                [
+                    _markdown_text(pdf_path.name),
+                    _markdown_text(_format_date_for_filename(abrechnung) or ""),
+                    _markdown_text(_time_range(abrechnung)),
+                    _markdown_text(fahrt.ziel if fahrt else ""),
+                    _markdown_text(fahrt.anlass if fahrt else ""),
+                    f"{_format_money(abrechnung.summen.fahrtkosten_eur)} {currency or 'EUR'}",
+                    (
+                        f"{_format_money(abrechnung.summen.verpflegungspauschalen_eur)} "
+                        f"{currency or 'EUR'}"
+                    ),
+                    f"{_format_money(abrechnung.summen.auslagen_eur)} {currency or 'EUR'}",
+                    f"{_format_money(abrechnung.summen.gesamt_eur)} {currency or 'EUR'}",
+                ]
+            )
+            + " |"
+        )
+
+    lines.extend(["", f"**Gesamtbetrag:** {_format_money(total)} {currency or 'EUR'}", ""])
+    summary_path.write_text("\n".join(lines), encoding="utf-8")
+    return summary_path
+
+
+def split_abrechnung_by_fahrt(
+    abrechnung: BerechneteAbrechnung,
+) -> tuple[BerechneteAbrechnung, ...]:
+    """Teile mehrere Fahrten in einzelne Lexware-Formularabrechnungen auf."""
+
+    if len(abrechnung.fahrten) <= 1:
+        return (abrechnung,)
+
+    einzelabrechnungen = []
+    for berechnete_fahrt in abrechnung.fahrten:
+        auslage = (
+            replace(berechnete_fahrt.auslage, fahrt_index=0)
+            if berechnete_fahrt.auslage is not None
+            else None
+        )
+        einzel_fahrt = replace(berechnete_fahrt, index=0, auslage=auslage)
+        einzelabrechnungen.append(
+            BerechneteAbrechnung(
+                eingabe=replace(abrechnung.eingabe, fahrten=(berechnete_fahrt.fahrt,)),
+                fahrten=(einzel_fahrt,),
+                auslagen=(auslage,) if auslage is not None else (),
+                summen=BerechnungsSummen(
+                    fahrtkosten_eur=einzel_fahrt.fahrtkosten_eur,
+                    verpflegungspauschalen_eur=einzel_fahrt.verpflegungspauschale_eur,
+                    auslagen_eur=auslage.betrag_eur if auslage is not None else Decimal("0.00"),
+                    gesamt_eur=einzel_fahrt.gesamt_eur,
+                ),
+            )
+        )
+    return tuple(einzelabrechnungen)
 
 
 def _validate_output_dir(path: Path) -> Path:
@@ -126,20 +227,43 @@ def _output_filename(
     abrechnung: BerechneteAbrechnung,
     *,
     input_file: Path,
-    index: int,
-    total: int,
 ) -> str:
+    base = _pdf_base_name(abrechnung, input_file=input_file)
+    date_prefix = _format_date_for_filename(abrechnung)
+    if date_prefix:
+        base = f"{date_prefix}_{base}"
+    return f"{base}.pdf"
+
+
+def _pdf_base_name(abrechnung: BerechneteAbrechnung, *, input_file: Path) -> str:
+    title_slug = _slug(abrechnung.eingabe.abrechnung.titel or "")
+    return title_slug or _slug(Path(input_file).stem) or "abrechnung"
+
+
+def _summary_base_name(abrechnung: BerechneteAbrechnung, *, input_file: Path) -> str:
     eingabe = abrechnung.eingabe
     title_slug = _slug(eingabe.abrechnung.titel or "")
-    if title_slug:
-        period = _period_slug(eingabe.abrechnung.zeitraum.von, eingabe.abrechnung.zeitraum.bis)
-        base = f"{period}_{title_slug}" if period else title_slug
-    else:
-        base = _slug(Path(input_file).stem) or "abrechnung"
+    if not title_slug:
+        return _slug(Path(input_file).stem) or "abrechnung"
 
-    if total > 1:
-        base = f"{base}-{index:02d}"
-    return f"{base}.pdf"
+    period = _period_slug(eingabe.abrechnung.zeitraum.von, eingabe.abrechnung.zeitraum.bis)
+    return f"{period}_{title_slug}" if period else title_slug
+
+
+def _deduplicate_filenames(filenames: Sequence[str]) -> tuple[str, ...]:
+    seen: dict[str, int] = {}
+    deduplicated = []
+    for filename in filenames:
+        count = seen.get(filename, 0) + 1
+        seen[filename] = count
+        if count == 1:
+            deduplicated.append(filename)
+            continue
+
+        stem = Path(filename).stem
+        suffix = Path(filename).suffix
+        deduplicated.append(f"{stem}-{count:02d}{suffix}")
+    return tuple(deduplicated)
 
 
 def _period_slug(von, bis) -> str:
@@ -158,12 +282,43 @@ def _slug(value: str) -> str:
     return slug.strip("-")
 
 
+def _format_date_for_filename(abrechnung: BerechneteAbrechnung) -> str | None:
+    dates = [fahrt.fahrt.datum for fahrt in abrechnung.fahrten if fahrt.fahrt.datum is not None]
+    if not dates:
+        return None
+    return f"{min(dates):%Y-%m-%d}"
+
+
+def _format_money(value: Decimal) -> str:
+    return f"{value:.2f}".replace(".", ",")
+
+
+def _time_range(abrechnung: BerechneteAbrechnung) -> str:
+    if len(abrechnung.fahrten) != 1:
+        return ""
+    fahrt = abrechnung.fahrten[0].fahrt
+    if fahrt.startzeit is None or fahrt.endzeit is None:
+        return ""
+    return f"{fahrt.startzeit:%H:%M}-{fahrt.endzeit:%H:%M}"
+
+
+def _summary_title(abrechnungen: Sequence[BerechneteAbrechnung]) -> str:
+    if not abrechnungen:
+        return "Reisekosten-Zusammenfassung"
+    title = abrechnungen[0].eingabe.abrechnung.titel
+    return f"Reisekosten-Zusammenfassung: {title}" if title else "Reisekosten-Zusammenfassung"
+
+
+def _markdown_text(value: str | None) -> str:
+    return (value or "").replace("|", "\\|").replace("\n", " ")
+
+
 def _ensure_no_collisions(output_paths: Sequence[Path], *, force: bool) -> None:
     if force:
         return
     for path in output_paths:
         if path.exists():
-            raise CliError(f"Ziel-PDF existiert bereits: {path}")
+            raise CliError(f"Zieldatei existiert bereits: {path}")
 
 
 def _print_error(error: Exception) -> None:

@@ -12,14 +12,18 @@ Nach der Installation ist der Standardaufruf:
 yaml-reisekosten-tool examples/example.yml
 ```
 
-Ohne Zusatzargumente liest das Werkzeug genau diese YAML-Datei und schreibt die erzeugten PDF-Dateien in das aktuelle Arbeitsverzeichnis. Die Eingabedatei wird dabei nicht veraendert. Bei Erfolg gibt die CLI die erzeugten PDF-Pfade auf stdout aus.
+Ohne Zusatzargumente liest das Werkzeug genau diese YAML-Datei und schreibt die erzeugten PDF-Dateien sowie eine Markdown-Zusammenfassung in das aktuelle Arbeitsverzeichnis. Die Eingabedatei wird dabei nicht veraendert. Bei Erfolg gibt die CLI die erzeugten PDF-Pfade und danach den Pfad der Markdown-Zusammenfassung auf stdout aus.
 
-PDF-Dateinamen werden aus Abrechnungszeitraum und Titel gebildet, zum Beispiel `2026-05_reisekosten-max-mustermann.pdf`. Wenn mehrere Abrechnungen in einer YAML-Datei erzeugt werden, erhalten sie nummerierte Suffixe wie `-01` und `-02`. Vorhandene PDFs werden standardmaessig nicht ueberschrieben; bei einer Namenskollision bricht die CLI mit einer klaren Fehlermeldung ab.
+PDF-Dateinamen werden aus Fahrtdatum und Titel gebildet, zum Beispiel `2026-05-04_reisekosten-max-mustermann.pdf`. Bei mehrtaegigen Reisen wird der Starttag verwendet. Nur wenn mehrere Fahrten denselben Tag und denselben Basisnamen haben, erhalten die spaeteren Dateien nummerierte Suffixe wie `-02`. Vorhandene Ausgabedateien werden standardmaessig nicht ueberschrieben; bei einer Namenskollision bricht die CLI mit einer klaren Fehlermeldung ab.
+
+Jeder Eintrag unter `fahrten` entspricht einer eigenen Reise im Lexware-Formular und erzeugt ein eigenes PDF. Das vermeidet, dass mehrere voneinander getrennte Tagesfahrten innerhalb eines Monats als eine durchgehende Dienstreise mit erstem Reisebeginn und letztem Reiseende erscheinen.
+
+Zusaetzlich erzeugt die CLI eine interne Markdown-Zusammenfassung, zum Beispiel `2026-05_reisekosten-max-mustermann_zusammenfassung.md`. Diese Datei ist nicht Teil der Lexware-Form, sondern dient der schnellen Pruefung mit Einzelbetraegen und Gesamtbetrag ueber alle erzeugten PDFs.
 
 Fuer den MVP sind nur wenige Optionen vorgesehen:
 
 - `--output-dir DIR`: PDF-Ausgabe in ein bestehendes, beschreibbares Verzeichnis schreiben.
-- `--force`: Bereits vorhandene Ziel-PDFs ueberschreiben.
+- `--force`: Bereits vorhandene Zieldateien ueberschreiben.
 
 Fehlende Dateien, ungueltiges YAML, Schemafehler und Render-Fehler werden kurz auf stderr gemeldet und fuehren zu einem Exit-Code ungleich `0`. Details zum CLI- und Ausgabe-Kontrakt stehen in `ARCHITECTURE.md`.
 
@@ -32,7 +36,7 @@ yaml-reisekosten-tool examples/example.yml --output-dir /tmp/reisekosten --force
 python -m yaml_reisekosten_tool examples/example.yml
 ```
 
-`--output-dir` muss auf ein bereits existierendes, beschreibbares Verzeichnis zeigen. `--force` erlaubt das Ueberschreiben eines bereits vorhandenen Ziel-PDFs. Ohne `--force` wird nicht automatisch ein alternativer Dateiname erzeugt.
+`--output-dir` muss auf ein bereits existierendes, beschreibbares Verzeichnis zeigen. `--force` erlaubt das Ueberschreiben bereits vorhandener PDFs oder der Markdown-Zusammenfassung. Ohne `--force` wird nicht automatisch ein alternativer Dateiname erzeugt.
 
 Fuer die PDF-Erzeugung muss `typst` im `PATH` liegen. Ist Typst nicht installiert, endet der CLI-Lauf mit einer Meldung wie `Fehler: Typst ist nicht installiert oder nicht im PATH: typst`.
 
@@ -85,7 +89,7 @@ Die Eingabedatei besteht aktuell aus diesen Bereichen:
 - `arbeitgeber`: Angaben zum Arbeitgeber aus der Reisekostenabrechnung.
 - `defaults`: Wiederkehrende Werte fuer Fahrten und Auslagen.
 - `unterschriften`: Optionale Angaben fuer digitale Unterschriftsfelder.
-- `fahrten`: Liste der einzelnen Reisen oder Kundenfahrten.
+- `fahrten`: Liste der einzelnen Reisen oder Kundenfahrten. Jeder Eintrag wird in ein eigenes PDF gerendert; wiederkehrende Angaben werden ueber `defaults.fahrt` geteilt.
 
 ### Defaults und Overrides
 
