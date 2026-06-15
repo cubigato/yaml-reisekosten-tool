@@ -70,8 +70,17 @@
     #text(size: 8.4pt, weight: "medium")[#meta]
   ]
   if signature.at("unterschrift_asset") != "" {
-    place(top + left, dx: x + w - 62mm, dy: y - 14mm)[
-      #image(signature.at("unterschrift_asset"), width: 58mm, fit: "contain")
+    place(top + left, dx: x + w - 40mm, dy: y - 10.5mm)[
+      #box(width: 40mm, height: 10mm)[
+        #align(right + bottom)[
+          #image(
+            signature.at("unterschrift_asset"),
+            width: 100%,
+            height: 100%,
+            fit: "contain",
+          )
+        ]
+      ]
     ]
   }
   label(x, y + 2mm, body)

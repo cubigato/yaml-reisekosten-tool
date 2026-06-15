@@ -79,6 +79,16 @@ def test_template_uses_compact_reisenebenkosten_value() -> None:
     assert "#compact-filled-field(111.1mm, 222.3mm, 84mm" in template
 
 
+def test_template_limits_signatures_to_their_own_rows() -> None:
+    template = resolve_template_path().read_text(encoding="utf-8")
+
+    assert "dx: x + w - 40mm, dy: y - 10.5mm" in template
+    assert "#box(width: 40mm, height: 10mm)" in template
+    assert "width: 100%" in template
+    assert "height: 100%" in template
+    assert 'fit: "contain"' in template
+
+
 def test_resolve_template_path_uses_package_data_independent_from_cwd(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
