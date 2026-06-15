@@ -34,6 +34,13 @@
   ]
   label(x, y + 2mm, body)
 }
+#let compact-filled-field(x, y, w, body, value) = {
+  place(top + left, dx: x, dy: y)[#line(length: w, stroke: 0.55pt)]
+  place(top + left, dx: x, dy: y - 4.6mm)[
+    #box(width: w, clip: true)[#text(size: 7.4pt, weight: "medium")[#value]]
+  ]
+  label(x, y + 2mm, body)
+}
 #let checkbox(x, y, body) = {
   place(top + left, dx: x, dy: y)[#rect(width: 3mm, height: 3mm, stroke: red + 0.55pt)]
   place(top + left, dx: x + 5.8mm, dy: y - 0.1mm)[#text(size: 8.8pt, weight: "medium")[#body]]
@@ -130,7 +137,7 @@
 #label(175.3mm, 197.9mm, [pro Tag])
 #field(15mm, 209.6mm, 180.2mm, [Abzüge für Frühstück, Mittag- oder Abendessen])
 #field(15mm, 222.3mm, 83.8mm, [Übernachtungskosten])
-#filled-field(111.1mm, 222.3mm, 84mm, [Reisenebenkosten], kosten.at("auslagen") + " EUR")
+#compact-filled-field(111.1mm, 222.3mm, 84mm, [Reisenebenkosten], kosten.at("reisenebenkosten"))
 #filled-field(15mm, 235mm, 180.2mm, [Gesamtkosten], kosten.at("gesamt") + " EUR")
 
 #signature-field(15mm, 256.2mm, 180.2mm, [Ort, Datum, Name und Unterschrift Antragsteller], antragsteller)

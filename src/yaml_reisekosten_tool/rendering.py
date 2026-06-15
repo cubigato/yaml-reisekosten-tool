@@ -95,6 +95,7 @@ def build_render_context(abrechnung: BerechneteAbrechnung) -> dict[str, Any]:
             "fahrtkosten": _format_money(abrechnung.summen.fahrtkosten_eur),
             "verpflegung": _format_money(abrechnung.summen.verpflegungspauschalen_eur),
             "auslagen": _format_money(abrechnung.summen.auslagen_eur),
+            "reisenebenkosten": _format_reisenebenkosten(abrechnung, fahrten),
             "gesamt": _format_money(abrechnung.summen.gesamt_eur),
             "verpflegung_tage_acht_bis_vierundzwanzig": sum(
                 1
@@ -266,6 +267,16 @@ def _format_money(value: Decimal | None) -> str:
     if value is None:
         return "0,00"
     return f"{value:.2f}".replace(".", ",")
+
+
+def _format_reisenebenkosten(
+    abrechnung: BerechneteAbrechnung,
+    fahrten: Sequence[BerechneteFahrt],
+) -> str:
+    amount = f"{_format_money(abrechnung.summen.auslagen_eur)} EUR"
+    if len(fahrten) != 1 or fahrten[0].auslage is None:
+        return amount
+    return f"{amount} ({fahrten[0].auslage.beschreibung})"
 
 
 def _format_number(value: Decimal | None) -> str:

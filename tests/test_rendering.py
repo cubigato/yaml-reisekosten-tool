@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 
 from yaml_reisekosten_tool.calculation import calculate_reisekosten
+from yaml_reisekosten_tool.cli import split_abrechnung_by_fahrt
 from yaml_reisekosten_tool.normalization import normalize_reisekosten_input
 from yaml_reisekosten_tool.rendering import (
     RenderingError,
@@ -23,6 +24,10 @@ def _example_abrechnung():
     return calculate_reisekosten(eingabe)
 
 
+def _example_einzelabrechnungen():
+    return split_abrechnung_by_fahrt(_example_abrechnung())
+
+
 def test_build_render_context_contains_template_values() -> None:
     context = build_render_context(_example_abrechnung())
 
@@ -37,11 +42,41 @@ def test_build_render_context_contains_template_values() -> None:
     assert context["kosten"]["fahrtkosten"] == "130,20"
     assert context["kosten"]["verpflegung"] == "56,00"
     assert context["kosten"]["auslagen"] == "62,00"
+    assert context["kosten"]["reisenebenkosten"] == "62,00 EUR"
     assert context["kosten"]["gesamt"] == "248,20"
     assert context["unterschriften"]["antragsteller"]["name"] == "Max Mustermann"
     assert context["unterschriften"]["antragsteller"]["datum"] == "31.03.2026"
     assert context["unterschriften"]["vorgesetzter"]["name"] == "Erika Leitung"
     assert len(context["reise"]["fahrten"]) == 5
+
+
+def test_build_render_context_shows_normalized_default_expense_description() -> None:
+    context = build_render_context(_example_einzelabrechnungen()[0])
+
+    assert context["kosten"]["reisenebenkosten"] == ("12,00 EUR (Parkhaus am Kundenstandort)")
+
+
+def test_build_render_context_shows_expense_override_description() -> None:
+    context = build_render_context(_example_einzelabrechnungen()[3])
+
+    assert context["kosten"]["reisenebenkosten"] == "14,00 EUR (Ausweichparkhaus)"
+
+
+def test_build_render_context_without_expense_has_no_description_placeholder() -> None:
+    data = load_yaml_mapping(Path("examples/minimal.yml"))
+    abrechnung = calculate_reisekosten(normalize_reisekosten_input(data))
+
+    context = build_render_context(abrechnung)
+
+    assert context["kosten"]["reisenebenkosten"] == "0,00 EUR"
+    assert "(" not in context["kosten"]["reisenebenkosten"]
+
+
+def test_template_uses_compact_reisenebenkosten_value() -> None:
+    template = resolve_template_path().read_text(encoding="utf-8")
+
+    assert 'kosten.at("reisenebenkosten")' in template
+    assert "#compact-filled-field(111.1mm, 222.3mm, 84mm" in template
 
 
 def test_resolve_template_path_uses_package_data_independent_from_cwd(
